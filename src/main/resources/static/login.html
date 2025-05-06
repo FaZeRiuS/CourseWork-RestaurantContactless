@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+</head>
+<body>
+<h2>Login</h2>
+<form action="/login" method="post">
+    <input type="email" name="email" placeholder="Email" required>
+    <input type="password" name="password" placeholder="Password" required>
+    <button type="submit">Login</button>
+</form>
+
+<a href="/oauth2/authorization/google">
+    <button type="button">Login with Google</button>
+</a>
+
+<a href="/register">
+    <button type="button">To Register</button>
+</a>
+<script>
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('error')) {
+        document.write("<p style='color:red'>Invalid username or password</p>");
+    }
+</script>
+</body>
+</html>
