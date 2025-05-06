@@ -29,9 +29,6 @@ public class CartAddingIntTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private DishService dishService;
-
     @BeforeEach
     public void setUp() {
         dishRepository.deleteAll();
