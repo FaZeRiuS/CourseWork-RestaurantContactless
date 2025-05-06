@@ -19,7 +19,6 @@ import static org.mockito.Mockito.*;
 class OrderServiceTest {
 
     @Mock private OrderRepository orderRepository;
-    @Mock private OrderItemRepository orderItemRepository;
     @Mock private DishRepository dishRepository;
     @Mock private UserRepository userRepository;
     @Mock private CartRepository cartRepository;
@@ -29,7 +28,7 @@ class OrderServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        orderService = new OrderServiceImpl(orderRepository, orderItemRepository, dishRepository, userRepository, cartRepository);
+        orderService = new OrderServiceImpl(orderRepository, dishRepository, userRepository, cartRepository);
     }
 
     @Test
