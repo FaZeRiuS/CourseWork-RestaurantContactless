@@ -50,7 +50,7 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("hasRole('ROLE_ADMINISTRATOR')")
+    @PreAuthorize("hasAnyRole('ROLE_ADMINISTRATOR', 'ROLE_CHEF')")
     public ResponseEntity<OrderResponseDto> updateOrderStatus(
             @PathVariable Integer id,
             @RequestParam OrderStatus newStatus) {
