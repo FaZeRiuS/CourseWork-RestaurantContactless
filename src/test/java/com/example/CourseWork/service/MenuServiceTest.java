@@ -110,7 +110,9 @@ class MenuServiceTest {
     @Test
     void testDeleteMenu() {
         Integer menuId = 1;
-
+        
+        when(menuRepository.existsById(menuId)).thenReturn(true);
+        
         menuService.deleteMenu(menuId);
 
         verify(menuRepository, times(1)).deleteById(menuId);
