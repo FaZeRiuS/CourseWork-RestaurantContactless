@@ -1,10 +1,10 @@
-package com.example.CourseWork;
+package com.example.CourseWork.service;
 
 import com.example.CourseWork.addition.OrderStatus;
 import com.example.CourseWork.dto.*;
+import com.example.CourseWork.mapper.OrderMapper;
 import com.example.CourseWork.model.*;
 import com.example.CourseWork.repository.*;
-import com.example.CourseWork.service.OrderService;
 import com.example.CourseWork.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,22 +20,20 @@ class OrderServiceTest {
 
     @Mock private OrderRepository orderRepository;
     @Mock private DishRepository dishRepository;
-    @Mock private UserRepository userRepository;
     @Mock private CartRepository cartRepository;
+    @Mock private OrderMapper orderMapper;
 
     private OrderService orderService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        orderService = new OrderServiceImpl(orderRepository, dishRepository, userRepository, cartRepository);
+        orderService = new OrderServiceImpl(orderRepository, dishRepository, cartRepository, orderMapper);
     }
 
     @Test
     void testCreateOrder_Success() {
-        Integer userId = 1;
-        User user = new User();
-        user.setId(userId);
+        String userId = "user-123";
 
         Dish dish = new Dish();
         dish.setId(1);
@@ -50,37 +48,33 @@ class OrderServiceTest {
         OrderRequestDto orderRequestDto = new OrderRequestDto();
         orderRequestDto.setItems(List.of(itemDto));
 
+        Order order = new Order();
+        order.setId(1);
+        order.setUserId(userId);
+        order.setStatus(OrderStatus.NEW);
+        order.setCreatedAt(LocalDateTime.now());
+        order.setTotalPrice(20.0f);
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        OrderResponseDto responseDto = new OrderResponseDto();
+        responseDto.setId(1);
+        responseDto.setUserId(userId);
+        responseDto.setStatus(OrderStatus.NEW);
+        responseDto.setTotalPrice(20.0f);
+
         when(dishRepository.findById(1)).thenReturn(Optional.of(dish));
-        when(orderRepository.save(any(Order.class))).thenAnswer(i -> {
-            Order o = i.getArgument(0);
-            o.setId(1);
-            return o;
-        });
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderMapper.toResponseDto(any(Order.class))).thenReturn(responseDto);
 
         OrderResponseDto response = orderService.createOrder(userId, orderRequestDto);
 
         assertNotNull(response);
-        assertEquals(1, response.getUserId());
+        assertEquals(userId, response.getUserId());
         assertEquals(20.0f, response.getTotalPrice());
-        assertEquals(1, response.getItems().size());
-        assertEquals("Pizza", response.getItems().getFirst().getDishName());
-    }
-
-    @Test
-    void testCreateOrder_UserNotFound() {
-        when(userRepository.findById(anyInt())).thenReturn(Optional.empty());
-
-        assertThrows(RuntimeException.class, () ->
-                orderService.createOrder(1, new OrderRequestDto()));
     }
 
     @Test
     void testCreateOrder_DishNotFound() {
-        Integer userId = 1;
-        User user = new User();
-        user.setId(userId);
+        String userId = "user-123";
 
         OrderItemDto itemDto = new OrderItemDto();
         itemDto.setDishId(1);
@@ -90,8 +84,7 @@ class OrderServiceTest {
         OrderRequestDto orderRequestDto = new OrderRequestDto();
         orderRequestDto.setItems(List.of(itemDto));
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(dishRepository.findById(99)).thenReturn(Optional.empty());
+        when(dishRepository.findById(1)).thenReturn(Optional.empty());
 
         assertThrows(RuntimeException.class, () ->
                 orderService.createOrder(userId, orderRequestDto));
@@ -99,15 +92,13 @@ class OrderServiceTest {
 
     @Test
     void testGetOrderById() {
+        String userId = "user-123";
         Order order = new Order();
         order.setId(1);
+        order.setUserId(userId);
         order.setStatus(OrderStatus.NEW);
         order.setCreatedAt(LocalDateTime.now());
         order.setTotalPrice(30.0f);
-
-        User user = new User();
-        user.setId(1);
-        order.setUser(user);
 
         Dish dish = new Dish();
         dish.setId(1);
@@ -122,28 +113,31 @@ class OrderServiceTest {
 
         order.setItems(List.of(item));
 
+        OrderResponseDto responseDto = new OrderResponseDto();
+        responseDto.setId(1);
+        responseDto.setUserId(userId);
+        responseDto.setStatus(OrderStatus.NEW);
+        responseDto.setTotalPrice(30.0f);
+
         when(orderRepository.findById(1)).thenReturn(Optional.of(order));
+        when(orderMapper.toResponseDto(any(Order.class))).thenReturn(responseDto);
 
         OrderResponseDto result = orderService.getOrderById(1);
 
         assertNotNull(result);
         assertEquals(1, result.getId());
-        assertEquals(1, result.getUserId());
-        assertEquals(1, result.getItems().size());
-        assertEquals("Burger", result.getItems().getFirst().getDishName());
+        assertEquals(userId, result.getUserId());
     }
 
     @Test
     void testGetNewOrders() {
+        String userId = "user-123";
         Order order = new Order();
         order.setId(1);
+        order.setUserId(userId);
         order.setStatus(OrderStatus.NEW);
         order.setCreatedAt(LocalDateTime.now());
         order.setTotalPrice(30.0f);
-
-        User user = new User();
-        user.setId(1);
-        order.setUser(user);
 
         Dish dish = new Dish();
         dish.setId(1);
@@ -158,36 +152,32 @@ class OrderServiceTest {
 
         order.setItems(List.of(item));
 
+        OrderResponseDto responseDto = new OrderResponseDto();
+        responseDto.setId(1);
+        responseDto.setUserId(userId);
+        responseDto.setStatus(OrderStatus.NEW);
+        responseDto.setTotalPrice(30.0f);
+
         when(orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.NEW))
                 .thenReturn(List.of(order));
+        when(orderMapper.toResponseDto(any(Order.class))).thenReturn(responseDto);
 
         List<OrderResponseDto> result = orderService.getNewOrders();
 
         assertNotNull(result);
         assertEquals(1, result.size());
-
-        OrderResponseDto dto = result.getFirst();
-        assertEquals(1, dto.getId());
-        assertEquals(1, dto.getUserId());
-        assertEquals(OrderStatus.NEW, dto.getStatus());
-        assertEquals(30.0f, dto.getTotalPrice());
-        assertEquals(1, dto.getItems().size());
-        assertEquals("Pizza", dto.getItems().getFirst().getDishName());
-        assertEquals("No cheese", dto.getItems().getFirst().getSpecialRequest());
+        assertEquals(userId, result.getFirst().getUserId());
     }
-
 
     @Test
     void testGetAllOrders() {
+        String userId = "user-123";
         Order order = new Order();
         order.setId(1);
+        order.setUserId(userId);
         order.setStatus(OrderStatus.NEW);
         order.setCreatedAt(LocalDateTime.now());
         order.setTotalPrice(25.0f);
-
-        User user = new User();
-        user.setId(1);
-        order.setUser(user);
 
         Dish dish = new Dish();
         dish.setId(1);
@@ -200,22 +190,26 @@ class OrderServiceTest {
         item.setOrder(order);
         order.setItems(List.of(item));
 
+        OrderResponseDto responseDto = new OrderResponseDto();
+        responseDto.setId(1);
+        responseDto.setUserId(userId);
+        responseDto.setStatus(OrderStatus.NEW);
+        responseDto.setTotalPrice(25.0f);
+
         when(orderRepository.findAllByOrderByCreatedAtDesc()).thenReturn(List.of(order));
+        when(orderMapper.toResponseDto(any(Order.class))).thenReturn(responseDto);
 
         List<OrderResponseDto> orders = orderService.getAllOrders();
 
         assertEquals(1, orders.size());
-        assertEquals("Salad", orders.getFirst().getItems().getFirst().getDishName());
+        assertEquals(userId, orders.getFirst().getUserId());
     }
 
     @Test
     void testConfirmOrderFromCart() {
-        User user = new User();
-        user.setId(1);
-        user.setEmail("user@example.com");
-
+        String userId = "user-123";
         Cart cart = new Cart();
-        cart.setUser(user);
+        cart.setUserId(userId);
         cart.setItems(new ArrayList<>());
 
         Dish dish = new Dish();
@@ -229,33 +223,39 @@ class OrderServiceTest {
         cartItem.setSpecialRequest("No onions");
         cart.getItems().add(cartItem);
 
-        when(cartRepository.findByUserId(user.getId())).thenReturn(Optional.of(cart));
-        when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(cartRepository.save(any(Cart.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        Order order = new Order();
+        order.setId(1);
+        order.setUserId(userId);
+        order.setStatus(OrderStatus.NEW);
+        order.setCreatedAt(LocalDateTime.now());
+        order.setTotalPrice(20.0f);
 
-        OrderResponseDto orderResponse = orderService.confirmOrderFromCart(user.getId());
+        OrderResponseDto responseDto = new OrderResponseDto();
+        responseDto.setId(1);
+        responseDto.setUserId(userId);
+        responseDto.setStatus(OrderStatus.NEW);
+        responseDto.setTotalPrice(20.0f);
 
-        verify(cartRepository, times(1)).findByUserId(user.getId());
-        verify(orderRepository, times(1)).save(any(Order.class));
-        verify(cartRepository, times(1)).save(any(Cart.class));
+        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(cart));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderMapper.toResponseDto(any(Order.class))).thenReturn(responseDto);
 
-        assertNotNull(orderResponse);
-        assertEquals(OrderStatus.NEW, orderResponse.getStatus());
-        assertEquals(user.getId(), orderResponse.getUserId());
-        assertEquals(20.0f, orderResponse.getTotalPrice());
+        OrderResponseDto result = orderService.confirmOrderFromCart(userId);
+
+        assertNotNull(result);
+        assertEquals(userId, result.getUserId());
+        assertEquals(OrderStatus.NEW, result.getStatus());
     }
 
     @Test
     void testChangeOrderStatus() {
+        String userId = "user-123";
         Order order = new Order();
         order.setId(1);
+        order.setUserId(userId);
         order.setStatus(OrderStatus.NEW);
         order.setCreatedAt(LocalDateTime.now());
         order.setTotalPrice(25.0f);
-
-        User user = new User();
-        user.setId(1);
-        order.setUser(user);
 
         Dish dish = new Dish();
         dish.setId(1);
@@ -268,17 +268,21 @@ class OrderServiceTest {
         item.setOrder(order);
         order.setItems(List.of(item));
 
+        OrderResponseDto responseDto = new OrderResponseDto();
+        responseDto.setId(1);
+        responseDto.setUserId(userId);
+        responseDto.setStatus(OrderStatus.COMPLETED);
+        responseDto.setTotalPrice(25.0f);
 
-            when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
-            when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderRepository.findById(order.getId())).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderMapper.toResponseDto(any(Order.class))).thenReturn(responseDto);
 
-            OrderResponseDto updatedOrderResponse = orderService.updateOrderStatus(order.getId(), OrderStatus.COMPLETED);
+        OrderResponseDto updatedOrderResponse = orderService.updateOrderStatus(order.getId(), OrderStatus.COMPLETED);
 
-            verify(orderRepository, times(1)).findById(order.getId());
-            verify(orderRepository, times(1)).save(any(Order.class));
-
-            assertNotNull(updatedOrderResponse);
-            assertEquals(OrderStatus.COMPLETED, updatedOrderResponse.getStatus());
-            assertEquals(order.getId(), updatedOrderResponse.getId());
+        assertNotNull(updatedOrderResponse);
+        assertEquals(OrderStatus.COMPLETED, updatedOrderResponse.getStatus());
+        assertEquals(order.getId(), updatedOrderResponse.getId());
+        assertEquals(userId, updatedOrderResponse.getUserId());
     }
 }

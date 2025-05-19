@@ -1,16 +1,19 @@
 package com.example.CourseWork.service.impl;
 
-import com.example.CourseWork.dto.*;
-import com.example.CourseWork.model.*;
-import com.example.CourseWork.repository.*;
+import com.example.CourseWork.dto.CartItemDto;
+import com.example.CourseWork.dto.CartResponseDto;
+import com.example.CourseWork.mapper.CartMapper;
+import com.example.CourseWork.model.Cart;
+import com.example.CourseWork.model.CartItem;
+import com.example.CourseWork.model.Dish;
+import com.example.CourseWork.repository.CartRepository;
+import com.example.CourseWork.repository.DishRepository;
 import com.example.CourseWork.service.CartService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -18,26 +21,23 @@ public class CartServiceImpl implements CartService {
 
     private final CartRepository cartRepository;
     private final DishRepository dishRepository;
-    private final UserRepository userRepository;
+    private final CartMapper cartMapper;
 
     @Transactional
     @Override
-    public CartResponseDto getCartByUserId(Integer userId) {
+    public CartResponseDto getCartByUserId(String userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Cart not found for user"));
 
-        return toResponseDto(cart);
+        return cartMapper.toResponseDto(cart);
     }
 
     @Transactional
     @Override
-    public CartResponseDto addItemToCart(Integer userId, CartItemDto itemDto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+    public CartResponseDto addItemToCart(String userId, CartItemDto itemDto) {
         Cart cart = cartRepository.findByUserId(userId).orElseGet(() -> {
             Cart newCart = new Cart();
-            newCart.setUser(user);
+            newCart.setUserId(userId);
             newCart.setItems(new ArrayList<>());
             return cartRepository.save(newCart);
         });
@@ -67,25 +67,6 @@ public class CartServiceImpl implements CartService {
 
         cartRepository.save(cart);
 
-        return toResponseDto(cart);
-    }
-
-    private CartResponseDto toResponseDto(Cart cart) {
-        CartResponseDto dto = new CartResponseDto();
-        dto.setCartId(cart.getId());
-        dto.setUserId(cart.getUser().getId());
-
-        List<CartItemDetailDto> items = cart.getItems().stream().map(item -> {
-            CartItemDetailDto detail = new CartItemDetailDto();
-            detail.setDishId(item.getDish().getId());
-            detail.setDishName(item.getDish().getName());
-            detail.setPrice(item.getDish().getPrice());
-            detail.setQuantity(item.getQuantity());
-            detail.setSpecialRequest(item.getSpecialRequest());
-            return detail;
-        }).collect(Collectors.toList());
-
-        dto.setItems(items);
-        return dto;
+        return cartMapper.toResponseDto(cart);
     }
 }

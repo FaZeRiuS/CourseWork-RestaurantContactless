@@ -1,6 +1,7 @@
-package com.example.CourseWork;
+package com.example.CourseWork.service;
 
 import com.example.CourseWork.dto.*;
+import com.example.CourseWork.mapper.MenuMapper;
 import com.example.CourseWork.model.*;
 import com.example.CourseWork.repository.MenuRepository;
 import com.example.CourseWork.service.impl.MenuServiceImpl;
@@ -19,12 +20,15 @@ class MenuServiceTest {
     @Mock
     private MenuRepository menuRepository;
 
+    @Mock
+    private MenuMapper menuMapper;
+
     private MenuServiceImpl menuService;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        menuService = new MenuServiceImpl(menuRepository);
+        menuService = new MenuServiceImpl(menuRepository, menuMapper);
     }
 
     @Test
@@ -36,15 +40,19 @@ class MenuServiceTest {
         savedMenu.setId(1);
         savedMenu.setName("Lunch Menu");
 
-        when(menuRepository.save(any(Menu.class))).thenReturn(savedMenu);
+        MenuResponseDto responseDto = new MenuResponseDto();
+        responseDto.setId(1);
+        responseDto.setName("Lunch Menu");
 
-        MenuResponseDto result = menuService.createMenu(requestDto); // changed return type
+        when(menuRepository.save(any(Menu.class))).thenReturn(savedMenu);
+        when(menuMapper.toResponseDto(any(Menu.class))).thenReturn(responseDto);
+
+        MenuResponseDto result = menuService.createMenu(requestDto);
 
         assertNotNull(result);
         assertEquals("Lunch Menu", result.getName());
         assertEquals(1, result.getId());
     }
-
 
     @Test
     void testUpdateMenu() {
@@ -56,8 +64,13 @@ class MenuServiceTest {
         existingMenu.setId(menuId);
         existingMenu.setName("Lunch Menu");
 
+        MenuResponseDto responseDto = new MenuResponseDto();
+        responseDto.setId(menuId);
+        responseDto.setName("Updated Menu");
+
         when(menuRepository.findById(menuId)).thenReturn(Optional.of(existingMenu));
         when(menuRepository.save(any(Menu.class))).thenReturn(existingMenu);
+        when(menuMapper.toResponseDto(any(Menu.class))).thenReturn(responseDto);
 
         MenuResponseDto result = menuService.updateMenu(menuId, menuDto);
 
@@ -78,7 +91,13 @@ class MenuServiceTest {
 
         menu.setDishes(List.of(dish));
 
+        MenuWithDishesDto responseDto = new MenuWithDishesDto();
+        responseDto.setId(1);
+        responseDto.setName("Lunch Menu");
+        responseDto.setDishes(List.of(new DishResponseDto()));
+
         when(menuRepository.findAll()).thenReturn(List.of(menu));
+        when(menuMapper.toMenuWithDishesDto(any(Menu.class))).thenReturn(responseDto);
 
         List<MenuWithDishesDto> result = menuService.getAllMenusWithDishes();
 
@@ -86,7 +105,6 @@ class MenuServiceTest {
         assertEquals(1, result.size());
         assertEquals("Lunch Menu", result.getFirst().getName());
         assertEquals(1, result.getFirst().getDishes().size());
-        assertEquals("Pizza", result.getFirst().getDishes().getFirst().getName());
     }
 
     @Test
@@ -95,7 +113,7 @@ class MenuServiceTest {
 
         menuService.deleteMenu(menuId);
 
-        verify(menuRepository, times(1)).deleteById(menuId);  // Verify delete was called once
+        verify(menuRepository, times(1)).deleteById(menuId);
     }
 
     @Test

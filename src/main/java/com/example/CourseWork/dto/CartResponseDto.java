@@ -7,6 +7,6 @@ import java.util.List;
 @Data
 public class CartResponseDto {
     private Integer cartId;
-    private Integer userId;
+    private String userId;
     private List<CartItemDetailDto> items;
 }

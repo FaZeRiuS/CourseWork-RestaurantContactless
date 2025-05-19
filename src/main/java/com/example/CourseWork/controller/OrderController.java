@@ -4,6 +4,7 @@ import com.example.CourseWork.addition.OrderStatus;
 import com.example.CourseWork.dto.OrderRequestDto;
 import com.example.CourseWork.dto.OrderResponseDto;
 import com.example.CourseWork.service.OrderService;
+import com.example.CourseWork.util.KeycloakUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,35 +19,41 @@ public class OrderController {
 
     private final OrderService orderService;
 
-    @PostMapping("/{userId}")
-    public ResponseEntity<OrderResponseDto> createOrder(@PathVariable Integer userId,
-                                                        @RequestBody OrderRequestDto dto) {
-        return ResponseEntity.ok(orderService.createOrder(userId, dto));
+    @PostMapping
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
+    public ResponseEntity<OrderResponseDto> createOrder(@RequestBody OrderRequestDto dto) {
+        return ResponseEntity.ok(orderService.createOrder(KeycloakUtil.getCurrentUser().getId(), dto));
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ROLE_ADMINISTRATOR')")
     public ResponseEntity<List<OrderResponseDto>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ROLE_ADMINISTRATOR')")
     public ResponseEntity<OrderResponseDto> getOrderById(@PathVariable Integer id) {
         return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
-    @PreAuthorize("hasRole('CHEF')")
     @GetMapping("/new")
-    public List<OrderResponseDto> getNewOrders() {
-        return orderService.getNewOrders();
+    @PreAuthorize("hasRole('ROLE_CHEF')")
+    public ResponseEntity<List<OrderResponseDto>> getNewOrders() {
+        return ResponseEntity.ok(orderService.getNewOrders());
     }
 
     @PostMapping("/confirm")
-    public ResponseEntity<OrderResponseDto> confirmOrder(@RequestParam Integer userId) {
-        return ResponseEntity.ok(orderService.confirmOrderFromCart(userId));
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
+    public ResponseEntity<OrderResponseDto> confirmOrderFromCart() {
+        return ResponseEntity.ok(orderService.confirmOrderFromCart(KeycloakUtil.getCurrentUser().getId()));
     }
 
-    @PostMapping("/{id}/status")
-    public ResponseEntity<OrderResponseDto> updateOrderStatus(@RequestParam OrderStatus status, @PathVariable Integer id) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(id, status));
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasRole('ROLE_ADMINISTRATOR')")
+    public ResponseEntity<OrderResponseDto> updateOrderStatus(
+            @PathVariable Integer id,
+            @RequestParam OrderStatus newStatus) {
+        return ResponseEntity.ok(orderService.updateOrderStatus(id, newStatus));
     }
 }

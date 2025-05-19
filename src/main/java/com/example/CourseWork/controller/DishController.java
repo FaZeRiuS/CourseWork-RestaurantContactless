@@ -17,19 +17,19 @@ public class DishController {
 
     private final DishService dishService;
 
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ROLE_ADMINISTRATOR')")
     @PostMapping
     public ResponseEntity<DishResponseDto> createDish(@RequestBody DishDto dto) {
         return ResponseEntity.ok(dishService.createDish(dto));
     }
 
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ROLE_ADMINISTRATOR')")
     @PutMapping("/{id}")
     public ResponseEntity<DishResponseDto> updateDish(@PathVariable Integer id, @RequestBody DishDto dto) {
         return ResponseEntity.ok(dishService.updateDish(id, dto));
     }
 
-    @PreAuthorize("hasRole('ADMINISTRATOR')")
+    @PreAuthorize("hasRole('ROLE_ADMINISTRATOR')")
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteDish(@PathVariable Integer id) {
         dishService.deleteDish(id);

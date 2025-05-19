@@ -3,8 +3,10 @@ package com.example.CourseWork.controller;
 import com.example.CourseWork.dto.CartItemDto;
 import com.example.CourseWork.dto.CartResponseDto;
 import com.example.CourseWork.service.CartService;
+import com.example.CourseWork.util.KeycloakUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -14,14 +16,15 @@ public class CartController {
 
     private final CartService cartService;
 
-    @GetMapping("/{userId}")
-    public ResponseEntity<CartResponseDto> getCart(@PathVariable Integer userId) {
-        return ResponseEntity.ok(cartService.getCartByUserId(userId));
+    @GetMapping
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
+    public ResponseEntity<CartResponseDto> getCart() {
+        return ResponseEntity.ok(cartService.getCartByUserId(KeycloakUtil.getCurrentUser().getId()));
     }
 
-    @PostMapping("/{userId}/add")
-    public ResponseEntity<CartResponseDto> addItem(@PathVariable Integer userId,
-                                                   @RequestBody CartItemDto dto) {
-        return ResponseEntity.ok(cartService.addItemToCart(userId, dto));
+    @PostMapping("/items")
+    @PreAuthorize("hasRole('ROLE_CUSTOMER')")
+    public ResponseEntity<CartResponseDto> addItemToCart(@RequestBody CartItemDto itemDto) {
+        return ResponseEntity.ok(cartService.addItemToCart(KeycloakUtil.getCurrentUser().getId(), itemDto));
     }
 }

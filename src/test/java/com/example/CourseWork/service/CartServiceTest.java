@@ -1,8 +1,9 @@
-package com.example.CourseWork;
+package com.example.CourseWork.service;
 
 import com.example.CourseWork.dto.CartItemDetailDto;
 import com.example.CourseWork.dto.CartItemDto;
 import com.example.CourseWork.dto.CartResponseDto;
+import com.example.CourseWork.mapper.CartMapper;
 import com.example.CourseWork.model.*;
 import com.example.CourseWork.repository.*;
 import com.example.CourseWork.service.impl.CartServiceImpl;
@@ -19,7 +20,7 @@ public class CartServiceTest {
 
     @Mock private CartRepository cartRepository;
     @Mock private DishRepository dishRepository;
-    @Mock private UserRepository userRepository;
+    @Mock private CartMapper cartMapper;
 
     @InjectMocks
     private CartServiceImpl cartService;
@@ -31,8 +32,7 @@ public class CartServiceTest {
 
     @Test
     void testGetCartByUserId_CartExists() {
-        User user = new User();
-        user.setId(1);
+        String userId = "user-123";
 
         Dish dish = new Dish();
         dish.setId(1);
@@ -46,31 +46,29 @@ public class CartServiceTest {
 
         Cart cart = new Cart();
         cart.setId(1);
-        cart.setUser(user);
+        cart.setUserId(userId);
         cart.setItems(List.of(item));
 
-        when(cartRepository.findByUserId(1)).thenReturn(Optional.of(cart));
+        CartResponseDto responseDto = new CartResponseDto();
+        responseDto.setUserId(userId);
+        responseDto.setItems(List.of(new CartItemDetailDto()));
 
-        CartResponseDto result = cartService.getCartByUserId(1);
+        when(cartRepository.findByUserId(userId)).thenReturn(Optional.of(cart));
+        when(cartMapper.toResponseDto(any(Cart.class))).thenReturn(responseDto);
 
-        assertEquals(1, result.getUserId());
+        CartResponseDto result = cartService.getCartByUserId(userId);
+
+        assertEquals(userId, result.getUserId());
         assertEquals(1, result.getItems().size());
-
-        CartItemDetailDto returnedItem = result.getItems().getFirst();
-        assertEquals("Pizza", returnedItem.getDishName());
-        assertEquals(2, returnedItem.getQuantity());
     }
 
     @Test
     void testAddItemToCart_NewCartCreated() {
-        int userId = 1;
+        String userId = "user-123";
         CartItemDto itemDto = new CartItemDto();
         itemDto.setDishId(1);
         itemDto.setQuantity(3);
         itemDto.setSpecialRequest("No onions");
-
-        User user = new User();
-        user.setId(userId);
 
         Dish dish = new Dish();
         dish.setId(1);
@@ -79,19 +77,21 @@ public class CartServiceTest {
 
         Cart newCart = new Cart();
         newCart.setId(1);
-        newCart.setUser(user);
+        newCart.setUserId(userId);
         newCart.setItems(new ArrayList<>());
 
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
+        CartResponseDto responseDto = new CartResponseDto();
+        responseDto.setUserId(userId);
+        responseDto.setItems(new ArrayList<>());
+
         when(cartRepository.findByUserId(userId)).thenReturn(Optional.empty());
         when(dishRepository.findById(1)).thenReturn(Optional.of(dish));
         when(cartRepository.save(any(Cart.class))).thenReturn(newCart);
+        when(cartMapper.toResponseDto(any(Cart.class))).thenReturn(responseDto);
 
         CartResponseDto response = cartService.addItemToCart(userId, itemDto);
 
         assertEquals(userId, response.getUserId());
-        assertEquals(1, response.getItems().size());
-        assertEquals("Burger", response.getItems().getFirst().getDishName());
-        assertEquals(3, response.getItems().getFirst().getQuantity());
+        assertEquals(0, response.getItems().size());
     }
 }

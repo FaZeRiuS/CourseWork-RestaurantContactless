@@ -1,26 +1,44 @@
 services:
-  db:
-    image: postgres:15
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: restaurant_db
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5433:5432"
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     ports:
       - "8081:8081"
-    depends_on:
-      - db
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/restaurant_db
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: password
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/restaurant_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=password
+      - KEYCLOAK_AUTH_SERVER_URL=http://keycloak:8080
+    depends_on:
+      - postgres
+      - keycloak
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://postgres:5432/keycloak
+      - KC_DB_USERNAME=postgres
+      - KC_DB_PASSWORD=password
+    command:
+      - start-dev
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_MULTIPLE_DATABASES=restaurant_db,keycloak
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
 
 volumes:
-  pgdata:
+  postgres_data:

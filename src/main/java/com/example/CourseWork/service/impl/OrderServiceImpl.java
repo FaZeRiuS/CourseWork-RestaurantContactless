@@ -2,13 +2,13 @@ package com.example.CourseWork.service.impl;
 
 import com.example.CourseWork.addition.OrderStatus;
 import com.example.CourseWork.dto.*;
+import com.example.CourseWork.mapper.OrderMapper;
 import com.example.CourseWork.model.*;
 import com.example.CourseWork.repository.*;
 import com.example.CourseWork.service.OrderService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,16 +20,13 @@ public class OrderServiceImpl implements OrderService {
 
     private final OrderRepository orderRepository;
     private final DishRepository dishRepository;
-    private final UserRepository userRepository;
     private final CartRepository cartRepository;
+    private final OrderMapper orderMapper;
 
     @Override
-    public OrderResponseDto createOrder(Integer userId, OrderRequestDto dto) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+    public OrderResponseDto createOrder(String userId, OrderRequestDto dto) {
         Order order = new Order();
-        order.setUser(user);
+        order.setUserId(userId);
         order.setCreatedAt(LocalDateTime.now());
         order.setStatus(OrderStatus.NEW);
 
@@ -53,32 +50,38 @@ public class OrderServiceImpl implements OrderService {
         order.setItems(items);
 
         Order saved = orderRepository.save(order);
-        return toResponseDto(saved);
+        return orderMapper.toResponseDto(saved);
     }
+
     @Transactional
     @Override
     public List<OrderResponseDto> getAllOrders() {
         return orderRepository.findAllByOrderByCreatedAtDesc()
-                .stream().map(this::toResponseDto).collect(Collectors.toList());
+                .stream().map(orderMapper::toResponseDto).collect(Collectors.toList());
     }
+
     @Transactional
     @Override
     public OrderResponseDto getOrderById(Integer id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found"));
-        return toResponseDto(order);
+        return orderMapper.toResponseDto(order);
     }
+
     @Transactional
     @Override
     public List<OrderResponseDto> getNewOrders() {
-        return orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.NEW)
-                .stream()
-                .map(this::toResponseDto)
+        List<Order> newOrders = orderRepository.findAllByStatusOrderByCreatedAtDesc(OrderStatus.NEW);
+        if (newOrders.isEmpty()) {
+            throw new RuntimeException("New orders not found");
+        }
+        return newOrders.stream()
+                .map(orderMapper::toResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Transactional
-    public OrderResponseDto confirmOrderFromCart(Integer userId) {
+    public OrderResponseDto confirmOrderFromCart(String userId) {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
 
@@ -87,7 +90,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         Order order = new Order();
-        order.setUser(cart.getUser());
+        order.setUserId(userId);
         order.setStatus(OrderStatus.NEW);
         order.setCreatedAt(LocalDateTime.now());
 
@@ -106,7 +109,6 @@ public class OrderServiceImpl implements OrderService {
                 .reduce(0f, Float::sum);
 
         order.setTotalPrice(total);
-
         order.setItems(orderItems);
 
         orderRepository.save(order);
@@ -114,7 +116,7 @@ public class OrderServiceImpl implements OrderService {
         cart.getItems().clear();
         cartRepository.save(cart);
 
-        return toResponseDto(order);
+        return orderMapper.toResponseDto(order);
     }
 
     @Transactional
@@ -127,27 +129,6 @@ public class OrderServiceImpl implements OrderService {
 
         Order updatedOrder = orderRepository.save(order);
 
-        return toResponseDto(updatedOrder);
-    }
-
-    private OrderResponseDto toResponseDto(Order order) {
-        OrderResponseDto dto = new OrderResponseDto();
-        dto.setId(order.getId());
-        dto.setUserId(order.getUser().getId());
-        dto.setStatus(order.getStatus());
-        dto.setCreatedAt(order.getCreatedAt());
-        dto.setTotalPrice(order.getTotalPrice());
-
-        List<OrderItemResponseDto> items = order.getItems().stream().map(item -> {
-            OrderItemResponseDto i = new OrderItemResponseDto();
-            i.setDishId(item.getDish().getId());
-            i.setDishName(item.getDish().getName());
-            i.setQuantity(item.getQuantity());
-            i.setSpecialRequest(item.getSpecialRequest());
-            return i;
-        }).collect(Collectors.toList());
-
-        dto.setItems(items);
-        return dto;
+        return orderMapper.toResponseDto(updatedOrder);
     }
 }
